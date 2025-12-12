@@ -699,6 +699,28 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
+// Debug endpoint: Standards summary
+app.get('/debug/standardsSummary', (req: Request, res: Response) => {
+  const byStandard: Record<string, number> = {};
+  const sampleRefs: Record<string, string[]> = {};
+
+  for (const r of normalizedData) {
+    byStandard[r.standard] = (byStandard[r.standard] || 0) + 1;
+    if (r.reference) {
+      if (!sampleRefs[r.standard]) sampleRefs[r.standard] = [];
+      if (sampleRefs[r.standard].length < 3) {
+        sampleRefs[r.standard].push(r.reference);
+      }
+    }
+  }
+
+  res.json({
+    total: normalizedData.length,
+    byStandard,
+    sampleReferences: sampleRefs
+  });
+});
+
 // Start server
 async function startServer() {
   try {
