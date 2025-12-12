@@ -1,0 +1,287 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Saudi Standards API",
+    "version": "1.0.0",
+    "description": "API for searching Saudi security, fire, data protection and cybersecurity requirements"
+  },
+  "servers": [
+    {
+      "url": "https://saudi-standards-api.onrender.com",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/standards/searchRequirements": {
+      "post": {
+        "operationId": "searchRequirements",
+        "summary": "Search Saudi security, fire, data protection and cybersecurity requirements",
+        "description": "Search across all standards with optional filters for standard, directive code, facility class, domain, and text query",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "standard": {
+                    "type": "string",
+                    "description": "Standard identifier (e.g., HCIS_SEC, SBC_801)"
+                  },
+                  "directiveCode": {
+                    "type": "string",
+                    "description": "Directive or chapter code (e.g., SEC-05)"
+                  },
+                  "facilityClass": {
+                    "type": "string",
+                    "description": "Facility class or occupancy type"
+                  },
+                  "domain": {
+                    "type": "string",
+                    "description": "Domain filter (e.g., security, fire, cyber, data_protection)"
+                  },
+                  "query": {
+                    "type": "string",
+                    "description": "Text to search for in title and text fields"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 50,
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Maximum number of results to return"
+                  }
+                },
+                "description": "At least one filter (standard, directiveCode, facilityClass, domain, or query) must be provided"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching requirements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/NormalizedRecord"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - at least one filter is required"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/standards/getReference": {
+      "post": {
+        "operationId": "getReference",
+        "summary": "Get a specific requirement by reference code",
+        "description": "Retrieve a single requirement by its exact reference code (e.g., 'HCIS SEC-05 4.3.2')",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reference"],
+                "properties": {
+                  "reference": {
+                    "type": "string",
+                    "description": "Exact reference code to look up"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Found requirement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NormalizedRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - at least one filter is required"
+          },
+          "404": {
+            "description": "Reference not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/standards/generateChecklist": {
+      "post": {
+        "operationId": "generateChecklist",
+        "summary": "Generate a compliance checklist",
+        "description": "Generate a checklist of requirements filtered by standards, facility class, and domains",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["standards"],
+                "properties": {
+                  "standards": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of standard identifiers to include"
+                  },
+                  "facilityClass": {
+                    "type": "string",
+                    "description": "Optional facility class filter"
+                  },
+                  "domains": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional array of domains to filter by"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated checklist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "checklist": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/NormalizedRecord"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - standards array is required"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "summary": "Health check endpoint",
+        "description": "Returns server status and number of loaded records",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "recordsLoaded": {
+                      "type": "integer"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NormalizedRecord": {
+        "type": "object",
+        "properties": {
+          "standard": {
+            "type": "string",
+            "description": "Standard identifier"
+          },
+          "directiveCode": {
+            "type": "string",
+            "description": "Directive or chapter code"
+          },
+          "sectionCode": {
+            "type": "string",
+            "description": "Section or article code"
+          },
+          "clauseId": {
+            "type": "string",
+            "description": "Clause ID or number"
+          },
+          "title": {
+            "type": "string",
+            "description": "Short heading or title"
+          },
+          "text": {
+            "type": "string",
+            "description": "Full requirement or clause text"
+          },
+          "facilityClass": {
+            "type": "string",
+            "description": "Facility class or occupancy type"
+          },
+          "domain": {
+            "type": "string",
+            "description": "Logical domain (security, fire, cyber, etc.)"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of tags"
+          },
+          "reference": {
+            "type": "string",
+            "description": "Human-readable reference code"
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -1,0 +1,21 @@
+{
+  "document_meta": {
+    "source_file": "civil_defense_regulations.pdf",
+    "extraction_date": "2025-12-12T03:36:49.065554",
+    "total_pages": 0,
+    "section_count": 1
+  },
+  "document": {
+    "document_title": "Civil Defense Regulations",
+    "pages": [],
+    "raw_text": "",
+    "structured_sections": [
+      {
+        "section_code": "0.0",
+        "section_title": "Introduction",
+        "content": "",
+        "clauses": []
+      }
+    ]
+  }
+}
