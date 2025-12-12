@@ -8,11 +8,7 @@
   "servers": [
     {
       "url": "https://saudi-standards-api.onrender.com",
-      "description": "Production server"
-    },
-    {
-      "url": "http://localhost:3000",
-      "description": "Local development server"
+      "description": "Production server (Live)"
     }
   ],
   "paths": {
