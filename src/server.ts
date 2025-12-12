@@ -128,7 +128,8 @@ function parseContentIntoClauses(
   
   // Pattern 1: Numbered clauses like "4.1.1", "4.2.3.1", etc. (most specific)
   // Matches: "4.1.1. Text content here" or "4.1.1 Text content here"
-  const numberedPattern = /(\d+\.\d+(?:\.\d+)*(?:\.\d+)?)\s+([^\d]+?)(?=\d+\.\d+(?:\.\d+)*|Article\s*\(|$)/gs;
+  // Note: The pattern handles optional period after the number (e.g., "4.4.1." or "4.4.1")
+  const numberedPattern = /(\d+\.\d+(?:\.\d+)*(?:\.\d+)?)\.?\s+([^\d]+?)(?=\d+\.\d+(?:\.\d+)*\.?\s+|Article\s*\(|$)/gs;
   
   // Pattern 2: Article patterns like "Article (1):", "Article (2)", etc.
   const articlePattern = /Article\s*\((\d+)\)(?:\s*[:])?\s*([^A]+?)(?=Article\s*\(|$)/gis;
@@ -549,6 +550,61 @@ app.post('/standards/getReference', (req: Request<{}, {}, GetReferenceBody>, res
       result = normalizedData.find(r => 
         normalizeRefString(r.reference).endsWith(refNorm)
       );
+    }
+    
+    // If still not found, try contains match (for partial references)
+    if (!result) {
+      result = normalizedData.find(r => 
+        normalizeRefString(r.reference).includes(refNorm) || refNorm.includes(normalizeRefString(r.reference))
+      );
+    }
+    
+    // If still not found, try matching by components (e.g., "HCIS SEC-01 4.4.1" -> standard + directiveCode + clauseId)
+    if (!result) {
+      // Extract components from reference: "HCIS SEC-01 4.4.1" or "SEC-01 4.4.1"
+      const parts = refNorm.split(/\s+/);
+      let directiveCode = '';
+      let clauseId = '';
+      
+      // Find directive code (SEC-01, SEC-02, etc.)
+      const directiveMatch = parts.find(p => p.match(/^sec-\d+/i));
+      if (directiveMatch) {
+        directiveCode = directiveMatch.toUpperCase();
+        const directiveIndex = parts.indexOf(directiveMatch);
+        // Get the part after directive (should be clauseId like "4.4.1")
+        if (directiveIndex + 1 < parts.length) {
+          clauseId = parts.slice(directiveIndex + 1).join(' ');
+        }
+      } else {
+        // If no directive found, try to find a numbered pattern (like "4.4.1")
+        const numberedMatch = parts.find(p => p.match(/^\d+\.\d+/));
+        if (numberedMatch) {
+          clauseId = numberedMatch;
+        } else if (parts.length > 0) {
+          clauseId = parts[parts.length - 1];
+        }
+      }
+      
+      if (directiveCode || clauseId) {
+        result = normalizedData.find(r => {
+          const rDirective = normalizeRefString(r.directiveCode);
+          const rClause = normalizeRefString(r.clauseId);
+          const rRef = normalizeRefString(r.reference);
+          
+          // Match directive code (if provided)
+          const directiveMatch = !directiveCode || 
+            rDirective === directiveCode.toLowerCase() || 
+            rRef.includes(directiveCode.toLowerCase());
+          
+          // Match clauseId (if provided) - this is the key part
+          const clauseMatch = !clauseId || 
+            rClause === clauseId || 
+            rClause.includes(clauseId) ||
+            rRef.includes(clauseId);
+          
+          return directiveMatch && clauseMatch;
+        });
+      }
     }
     
     if (!result) {
