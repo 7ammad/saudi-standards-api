@@ -10,7 +10,8 @@
     "start": "node dist/server.js",
     "start:prod": "node dist/server.js",
     "postinstall": "npm run build",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "selftest": "tsx src/selftest.ts"
   },
   "keywords": [
     "saudi",
