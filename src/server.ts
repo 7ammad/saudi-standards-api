@@ -445,6 +445,17 @@ async function loadData(): Promise<void> {
   }
 }
 
+// Normalize reference string for flexible matching
+// Handles variations like "HCIS SEC-01 4.4.1" vs "HCIS_SEC SEC-01 4.4.1"
+function normalizeRefString(ref: string): string {
+  if (!ref) return '';
+  return ref
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Fuzzy text matching
 function fuzzyMatch(text: string, query: string): boolean {
   if (!query) return true;
@@ -520,19 +531,30 @@ app.post('/standards/searchRequirements', (req: Request<{}, {}, SearchRequiremen
 // POST /standards/getReference
 app.post('/standards/getReference', (req: Request<{}, {}, GetReferenceBody>, res: Response) => {
   try {
-    const { reference } = req.body;
+    const { reference } = req.body ?? {};
     
-    if (!reference) {
-      return res.status(400).json({ error: 'reference is required' });
+    if (!reference || typeof reference !== 'string') {
+      return res.status(400).json({ error: 'reference (string) is required' });
     }
     
-    const result = normalizedData.find(r => 
-      r.reference.toLowerCase() === reference.toLowerCase()
+    const refNorm = normalizeRefString(reference);
+    
+    // Try exact match first (normalized)
+    let result = normalizedData.find(r => 
+      normalizeRefString(r.reference) === refNorm
     );
+    
+    // If not found, try endsWith match (for cases like "SEC-01 4.4.1" matching "HCIS_SEC SEC-01 4.4.1")
+    if (!result) {
+      result = normalizedData.find(r => 
+        normalizeRefString(r.reference).endsWith(refNorm)
+      );
+    }
     
     if (!result) {
       return res.status(404).json({ 
-        error: `Reference "${reference}" not found` 
+        error: 'Reference not found',
+        reference: reference
       });
     }
     
